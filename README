@@ -1,0 +1,113 @@
+
+ZenPacks.cluther.AIN
+********************
+
+This ZenPack demonstrates how event transforms can call out to
+external code delivered through a ZenPack. Having transform code be
+external has the following advantages.
+
+   * Prevents users from easily or accidentally changing your logic.
+
+   * Allows full Python usage instead of only *exec*.
+
+   * Easier unit testing of transform logic.
+
+However, having your transform logic be in code instead of the object
+database does have a disadvantage. You can't change the code on the
+fly without restarting portions of Zenoss. You will at least need to
+restart the *zenhub* daemon after changing your transform code that
+lives in a .py file as this is where transforms are executed.
+
+
+Usage
+=====
+
+After installing this ZenPack you can navigate to *Events* -> *Event
+Classes* -> *Gear Menu* -> *Transform*. You'll find that the following
+code has been inserted at the beginning of any existing transform you
+had configured:
+
+   from ZenPacks.cluther.AIN import transforms
+   transforms.add_ain_tag(dmd, evt)
+
+This will result in the "add_ain_tag" method inside the ZenPack's
+"transforms.py" being called with a couple of parameters it needs to
+operate. The "add_ain_tag" method can make modifications to the "evt"
+object which will result in changes to the event that is being
+transformed.
+
+
+How it Works
+============
+
+The "ZenPacks.cluther.AIN.ZenPack" class below contains all code
+related to installing and removing the ZenPack.
+
+class class ZenPacks.cluther.AIN.ZenPack(id, title=None, buildRelations=True)
+
+   Custom "ZenPack" subclass that allows us to override the "install"
+   and "remove" behavior of the ZenPack.
+
+   install(app)
+
+      Override standard ZenPack install to provide custom install
+      logic.
+
+      After calling the standard ZenPack install method from our
+      superclass we call our local "install_*" methods.
+
+   install_ain_transform(dmd)
+
+      Insert our callout code into the global event transform.
+
+   remove(app, leaveObjects=False)
+
+      Override standard ZenPack remove to provide custom remove logic.
+
+      If the ZenPack is being removed, and not upgraded, we call our
+      local "remove_*" methods. Then we call the standard ZenPack
+      remove method from our superclass.
+
+   remove_ain_transform(dmd)
+
+      Remove our callout code from the global event transform.
+
+The "ZenPacks.cluther.AIN.transforms" module below contains the code
+that the global event transform will call to do more sophisticated
+event transformation.
+
+External event transform code lives here. This keeps logic that
+shouldn't be touched in the web interface from being accessible.
+Another benefit to this approach is the better flow control allowed in
+normal functions rather than exec code. It is also far easier to unit
+test this code than event transforms that exist in the object
+database.
+
+ZenPacks.cluther.AIN.transforms.add_ain_tag(dmd, evt)
+
+   Add "AIN:" prefix to event summary and message.
+
+   Periodically processes $ZENHOME/etc/ain_rules.py for rules.
+   Evaluates the list of rules in order like a firewall ruleset for
+   the event passed into this method and adds an "AIN:" prefix to the
+   summary and message fields if one of the rules matches.
+
+ZenPacks.cluther.AIN.transforms.get_ain_rules(dmd)
+
+   Get the AIN rules.
+
+   Only reloads from file once per minute. Once the rules are loaded
+   they are stored in a volatile (non-persistent) property of "dmd".
+
+
+Compatibility
+=============
+
+This ZenPack is known to be compatible with the following Zenoss
+versions.
+
+   * Zenoss 4.0, 4.1
+
+   * Zenoss 3.0, 3.1, 3.2
+
+   * Zenoss 2.5
